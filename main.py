@@ -7,6 +7,7 @@ from datetime import datetime
 
 
 def get_student_information(id_number, cookie):
+    """查询学员的报名信息"""
     url = 'http://121.196.193.218/sxjgpt/student.do?list'
     headers = {
         'Accept': 'application/json, text/javascript, */*; q=0.01',
@@ -47,6 +48,7 @@ def get_student_information(id_number, cookie):
 
 
 def get_training_record(id_number, cookie):
+    """查询学员的阶段报审信息"""
     url = 'http://121.196.193.218/sxjgpt/stagetrainningtime.do?list'
     headers = {
         'Accept': 'application/json, text/javascript, */*; q=0.01',
@@ -84,10 +86,11 @@ def get_training_record(id_number, cookie):
 
 
 def information_processing(response):
+    """对学员的报审信息进行处理"""
     if response['total'] == 0:
         record = '无报审记录'
     else:
-        record_model = '科目{0}报审时间：{1}\n'
+        record_model = '科目{0}报审时间：{1}；'
         record = ''
         for i in range(response['total']):
             record += record_model.format(response['rows'][i]['subject'], response['rows'][i]['auditdate'])
@@ -104,13 +107,16 @@ def get_id_numbers_from_workbook(file_name):
 
 
 def get_information(file_name, cookie):
+    """查询学员的信息，包括报名信息、阶段报审信息"""
     id_numbers = get_id_numbers_from_workbook(file_name)
     num = len(id_numbers)
     information = [['' for i in range(3)] for j in range(num)]
     for i in range(num):
         count = 1  # 尝试连接的次数，初始化为0
+        top_count = 20
         id_number = id_numbers[i]
         message = "正在查询{0}，这是第{1:>2d}次查询，进程为{2:>4d}/{3:>4d}, 进度为{4:>6.2f}%"
+        message_error = "{0}该名学员已查询超过{1}次，网络不畅，请稍后再试！"
         while True:
             print('\r', message.format(id_number, count, i+1, num, (i+1)*100/num), end='', flush=True)
             try:
@@ -122,8 +128,8 @@ def get_information(file_name, cookie):
             except requests.exceptions.RequestException:  # 获取异常,查询异常时，如网速过慢超时
                 sleep(1)
                 count += 1  # 查询次数加1
-                if count > 20:
-                        sys.exit("网络不畅，请稍后再试！")
+                if count > top_count:
+                        sys.exit(message_error.format(id_number, top_count))
     return information
 
 
@@ -146,4 +152,4 @@ cookie = 'JSESSIONID=9E64AF00D4271C393FE98A177C027597; td_cookie=266670215'
 file_name = '6月1日至30日变更考试地.xls'
 output(file_name)
 end = time()  # 程序计时结束
-print("本次批量处理结束，共用时：{0:>6.2f}s".format(end - start))  # 输出程序运行时间
+print('\n', "本次批量处理结束，共用时：{0:>6.2f}s".format(end - start))  # 输出程序运行时间
