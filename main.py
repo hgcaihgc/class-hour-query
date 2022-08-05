@@ -1,26 +1,26 @@
 import requests
 import xlrd
 from xlutils.copy import copy
-from time import sleep, time
+from time import sleep, time, localtime, strftime
 import sys
 from datetime import datetime
 
 
 def get_student_information(id_number, cookie):
     """查询学员的报名信息"""
-    url = 'http://121.196.193.218/sxjgpt/student.do?list'
+    url = 'http://10.145.149.223:8006/sxjgpt/student.do?list'
     headers = {
         'Accept': 'application/json, text/javascript, */*; q=0.01',
         'Accept-Encoding': 'gzip, deflate',
-        'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6',
+        'Accept-Language': 'zh-CN,zh;q=0.9',
         'Connection': 'keep-alive',
-        'Content-Length': '113',
-        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+        'Content-Length': '123',
+        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-88',
         'Cookie': cookie,
-        'Host': '121.196.193.218',
-        'Origin': 'http://121.196.193.218',
-        'Referer': 'http://121.196.193.218/sxjgpt/student.do?main&menuId=402881e45aa6c5ae015aa6ca05cc0001',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.114 Safari/537.36 Edg/91.0.864.59',
+        'Host': '10.145.149.223:8006',
+        'Origin': 'http://10.145.149.223:8006',
+        'Referer': 'http://10.145.149.223:8006/sxjgpt/student.do?main&menuId=402881e45aa6c5ae015aa6ca05cc0001',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.0.0 Safari/537.36',
         'X-Requested-With': 'XMLHttpRequest',
     }
     data = {
@@ -31,6 +31,7 @@ def get_student_information(id_number, cookie):
         'stuName': '',
         'stuid': '',
         'phone': '',
+        'newmodel': '',
         'traincar': '',
         'page': '1',
         'rows': '10',
@@ -48,36 +49,30 @@ def get_student_information(id_number, cookie):
 
 
 def get_training_record(id_number, cookie):
-    """查询学员的阶段报审信息"""
-    url = 'http://121.196.193.218/sxjgpt/stagetrainningtime.do?list'
+    """查询学员的阶段报审信息推送公安的情况"""
+    url = 'http://10.145.149.223:8006/sxjgpt/sendPolice.do?list'
     headers = {
         'Accept': 'application/json, text/javascript, */*; q=0.01',
         'Accept-Encoding': 'gzip, deflate',
-        'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6',
+        'Accept-Language': 'zh-CN,zh;q=0.9',
         'Connection': 'keep-alive',
-        'Content-Length': '156',
+        'Content-Length': '80',
         'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
         'Cookie': cookie,
-        'Host': '121.196.193.218',
-        'Origin': 'http://121.196.193.218',
-        'Referer': 'http://121.196.193.218/sxjgpt/stagetrainningtime.do?main&menuId=402881e45ac68366015ac6996e360001',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.114 Safari/537.36 Edg/91.0.864.59',
+        'Host': '10.145.149.223:8006',
+        'Origin': 'http://223.4.72.243:8006',
+        'Referer': 'http://10.145.149.223:8006/sxjgpt/sendPolice.do?main&menuId=297e33aa5d588f04015d5891a99a0002',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.0.0 Safari/537.36',
         'X-Requested-With': 'XMLHttpRequest',
     }
     data = {
-        'qCityCode': '3306',
-        'qCountyCode': '',
-        'qSchoolCode': '',
-        'subject': '',
-        'auditstate': '-1',
-        'applybegin': '',
-        'applyend': '',
+        'stuidcard': id_number,
         'stuname': '',
-        'idnum': id_number,
-        'auditbegin': '',
-        'auditend': '',
+        'schoolname': '',
+        'subject': '',
+        'state': '',
         'page': '1',
-        'rows': '50',
+        'rows': '10'
     }
     # 获取请求的响应
     r = requests.post(url, data=data, headers=headers)
@@ -85,15 +80,25 @@ def get_training_record(id_number, cookie):
     return response
 
 
+def stamp_to_str(time_stamp):
+    # 转换本地时间
+    # time_format = "%Y-%m-%d %H:%M:%S"
+    time_format = "%Y-%m-%d"
+    time1 = localtime(time_stamp)
+    # 转为时间格式
+    time2 = strftime(time_format, time1)
+    return time2
+
+
 def information_processing(response):
     """对学员的报审信息进行处理"""
     if response['total'] == 0:
-        record = '无报审记录'
+        record = '未推送信息'
     else:
         record_model = '科目{0}报审时间：{1}；'
         record = ''
         for i in range(response['total']):
-            record += record_model.format(response['rows'][i]['subject'], response['rows'][i]['auditdate'])
+            record += record_model.format(response['rows'][i]['pxkm'], stamp_to_str(response['rows'][i]['shrq']/1000))
     return record.rstrip()
 
 
@@ -135,7 +140,7 @@ def get_information(file_name, cookie):
 
 def output(file_name):
     information = get_information(file_name, cookie)
-    title = ['报名时间', '培训机构', '报审情况']  # 自定义标题行
+    title = ['报名时间', '培训机构', '信息推送公安情况']  # 自定义标题行
     col_num = len(title)  # 获取列数
     work_book = xlrd.open_workbook(file_name)  # 打开xls表
     sheet = work_book.sheet_by_index(0)
@@ -148,8 +153,8 @@ def output(file_name):
 
 
 start = time()  # 程序开始计时
-cookie = 'JSESSIONID=9E64AF00D4271C393FE98A177C027597; td_cookie=266670215'
-file_name = '6月1日至30日变更考试地.xls'
+cookie = 'JSESSIONID=7C6966E852175AF57B6FECB656BB5365'
+file_name = '序号.xls'
 output(file_name)
 end = time()  # 程序计时结束
 print('\n', "本次批量处理结束，共用时：{0:>6.2f}s".format(end - start))  # 输出程序运行时间
